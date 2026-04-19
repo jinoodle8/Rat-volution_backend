@@ -1,35 +1,25 @@
+//models/GameRun.js
+
 const mongoose = require('mongoose')
 
 const gameRunSchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // users 컬렉션과 연결
-  status: { type: String, enum: ['dead', 'cleared'], required: true }, // 둘중 하나만 입력 가능
-  final_wave: { type: Number, required: true },
-  total_cheese_earned: { type: Number, required: true },
-  final_hp: { type: Number, required: true },
-  play_time_seconds: { type: Number, required: true },
-  
-  stats: {
-    move_speed: Number,
-    luck: Number,
-    insight: Number,
-    attack_speed: Number,
-    power: Number,
-    attack_power: Number
-  },
-  
-  inventory: {
-    cards: [{
-      card_code: String,
-      stack_count: Number
-    }],
-    items: [{
-      item_code: String,
-      is_used: Boolean
-    }]
-  },
-  
-  started_at: { type: Date, required: true },
-  ended_at: { type: Date, default: Date.now }
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, enum: ['dead', 'cleared'], required: true },
+    final_wave: { type: Number, default: 1, min: 1 },                  // Int32
+    total_cheese_earned: { type: Number, default: 0, min: 0 },         // Int32
+    final_hp: { type: Number, default: 0, min: 0 },                    // Int32
+
+    stats: {
+        move_speed: { type: Number, default: 0.0 },                    // Float
+        luck: { type: Number, default: 0.0 },                          // Float
+        insight: { type: Number, default: 0.0 },                       // Float
+        attack_speed: { type: Number, default: 0.0 },                  // Float
+        power: { type: Number, default: 0.0 },                         // Float
+        attack_power: { type: Number, default: 0.0 }                   // Float
+    },
+
+    started_at: { type: Date, required: true },
+    ended_at: { type: Date, default: null }
 })
 
 module.exports = mongoose.model('GameRun', gameRunSchema)
