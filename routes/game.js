@@ -48,7 +48,15 @@ router.post('/start', async (req, res) => {
 // 게임 종료 POST /game/end
 router.post('/end', async (req, res) => {
     try {
-        const { game_run_id, status, final_wave, total_cheese_earned, final_hp, stats } = req.body
+        const {
+            game_run_id,
+            status,
+            final_wave,
+            total_cheese_earned,
+            final_hp,
+            stats,
+            discovered_cards
+        } = req.body
 
         // 게임 로그 조회
         const gameRun = await GameRun.findById(game_run_id)
@@ -80,12 +88,14 @@ router.post('/end', async (req, res) => {
         const user = await User.findById(gameRun.user_id)
         user.total_cheese += total_cheese_earned
 
-        // 도감 업데이트 - 신규 카드만 추가
-        if (stats.discovered_cards && stats.discovered_cards.length > 0) {
-            const newCards = stats.discovered_cards.filter(
+        // 도감 업데이트 - 신규 카드만 추가 (REQ-047, API-GAM-004)
+        if (Array.isArray(discovered_cards) && discovered_cards.length > 0) {
+            const newCards = discovered_cards.filter(
                 code => !user.discovered_cards.includes(code)
             )
-            user.discovered_cards.push(...newCards)
+            if (newCards.length > 0) {
+                user.discovered_cards.push(...newCards)
+            }
         }
 
         await user.save()
