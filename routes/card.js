@@ -4,11 +4,9 @@ const CardMaster = require('../models/CardMaster')
 const User = require('../models/User')
 
 // 마스터 데이터 전체 조회 GET /card/master
-// 게임 초기 접속 시 1회 전송 (REQ-046)
 router.get('/master', async (req, res) => {
     try {
-        const cards = await CardMaster.find()
-            .select('-__v')     // mongoose 내부 필드 제외
+        const cards = await CardMaster.find().select('-__v')
 
         res.status(200).json({
             message: '마스터 데이터 조회 성공',
@@ -42,13 +40,12 @@ router.get('/master/:code', async (req, res) => {
     }
 })
 
-// 도감 조회 GET /card/dex/:userId  (REQ-038, REQ-039)
+// 도감 조회 GET /card/dex/:userId
 // 유저의 획득 여부와 마스터 카드 데이터를 합쳐서 반환
 router.get('/dex/:userId', async (req, res) => {
     try {
         const { userId } = req.params
 
-        // 유저 + 마스터 카드 병렬 조회
         const [user, allCards] = await Promise.all([
             User.findById(userId).select('nickname discovered_cards'),
             CardMaster.find().select('-__v').sort({ type: 1, rarity: 1, code: 1 })
@@ -58,7 +55,6 @@ router.get('/dex/:userId', async (req, res) => {
             return res.status(404).json({ message: '유저를 찾을 수 없습니다' })
         }
 
-        // 획득 여부 매핑
         const discoveredSet = new Set(user.discovered_cards)
         const cards = allCards.map(card => ({
             code: card.code,
