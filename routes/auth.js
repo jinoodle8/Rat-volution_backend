@@ -3,6 +3,7 @@ const router = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+const authenticate = require('../middleware/auth')
 
 // JWT 토큰 발급 헬퍼
 function issueToken(user) {
@@ -119,6 +120,32 @@ router.post('/guest', async (req, res) => {
             nickname: user.nickname,
             is_guest: true,
             token
+        })
+
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ message: '서버 오류' })
+    }
+})
+
+router.get('/session', authenticate, async (req, res) => {
+    try {
+        const userId = req.user.user_id
+
+        const user = await User.findById(userId).select('login_id nickname is_guest')
+        if (!user) {
+            return res.status(404).json({ message: '유저를 찾을 수 없습니다' })
+        }
+
+        // 마지막 로그인 시각 갱신
+        user.last_login = new Date()
+        await user.save()
+
+        res.status(200).json({
+            message: '세션 유효',
+            user_id: user._id,
+            nickname: user.nickname,
+            is_guest: user.is_guest
         })
 
     } catch (err) {
