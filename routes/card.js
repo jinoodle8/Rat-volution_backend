@@ -2,8 +2,9 @@ const express = require('express')
 const router = express.Router()
 const CardMaster = require('../models/CardMaster')
 const User = require('../models/User')
+const authenticate = require('../middleware/auth')
 
-// 마스터 데이터 전체 조회 GET /card/master
+// 마스터 데이터 전체 조회 GET /card/master (인증 불필요)
 router.get('/master', async (req, res) => {
     try {
         const cards = await CardMaster.find().select('-__v')
@@ -19,7 +20,7 @@ router.get('/master', async (req, res) => {
     }
 })
 
-// 카드 단건 조회 GET /card/master/:code
+// 카드 단건 조회 GET /card/master/:code (인증 불필요)
 router.get('/master/:code', async (req, res) => {
     try {
         const { code } = req.params
@@ -40,11 +41,10 @@ router.get('/master/:code', async (req, res) => {
     }
 })
 
-// 도감 조회 GET /card/dex/:userId
-// 유저의 획득 여부와 마스터 카드 데이터를 합쳐서 반환
-router.get('/dex/:userId', async (req, res) => {
+// 도감 조회 GET /card/dex (인증 필요, 본인 도감만)
+router.get('/dex', authenticate, async (req, res) => {
     try {
-        const { userId } = req.params
+        const userId = req.user.user_id   // 토큰에서 추출
 
         const [user, allCards] = await Promise.all([
             User.findById(userId).select('nickname discovered_cards'),

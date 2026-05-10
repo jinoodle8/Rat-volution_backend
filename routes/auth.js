@@ -1,7 +1,21 @@
 const express = require('express')
 const router = express.Router()
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+
+// JWT 토큰 발급 헬퍼
+function issueToken(user) {
+    return jwt.sign(
+        {
+            user_id: user._id,
+            nickname: user.nickname,
+            is_guest: user.is_guest
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }    // 7일 유효
+    )
+}
 
 // 회원가입 POST /auth/register
 router.post('/register', async (req, res) => {
@@ -19,7 +33,6 @@ router.post('/register', async (req, res) => {
             return res.status(409).json({ message: '이미 사용 중인 닉네임입니다' })
         }
 
-        // 비밀번호 해시
         const password_hash = await bcrypt.hash(password, 10)
 
         const user = await User.create({
@@ -29,9 +42,14 @@ router.post('/register', async (req, res) => {
             is_guest: false
         })
 
+        const token = issueToken(user)
+
         res.status(201).json({
             message: '회원가입 성공',
-            user_id: user._id
+            user_id: user._id,
+            nickname: user.nickname,
+            is_guest: false,
+            token
         })
 
     } catch (err) {
@@ -55,15 +73,17 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: '아이디 또는 비밀번호가 올바르지 않습니다' })
         }
 
-        // 마지막 로그인 시각 갱신
         user.last_login = new Date()
         await user.save()
+
+        const token = issueToken(user)
 
         res.status(200).json({
             message: '로그인 성공',
             user_id: user._id,
             nickname: user.nickname,
-            is_guest: false
+            is_guest: false,
+            token
         })
 
     } catch (err) {
@@ -77,11 +97,9 @@ router.post('/guest', async (req, res) => {
     try {
         const { uuid } = req.body
 
-        // 동일 uuid 게스트 있으면 재사용
         let user = await User.findOne({ login_id: 'guest_' + uuid })
 
         if (!user) {
-            // 게스트 계정 신규 생성
             user = await User.create({
                 login_id: 'guest_' + uuid,
                 nickname: '게스트' + Math.floor(Math.random() * 10000),
@@ -93,11 +111,14 @@ router.post('/guest', async (req, res) => {
             await user.save()
         }
 
+        const token = issueToken(user)
+
         res.status(200).json({
             message: '게스트 로그인 성공',
             user_id: user._id,
             nickname: user.nickname,
-            is_guest: true
+            is_guest: true,
+            token
         })
 
     } catch (err) {

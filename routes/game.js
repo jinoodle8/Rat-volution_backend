@@ -3,11 +3,15 @@ const router = express.Router()
 const GameRun = require('../models/GameRun')
 const User = require('../models/User')
 const Leaderboard = require('../models/Leaderboard')
+const authenticate = require('../middleware/auth')
+
+// 모든 게임 라우트는 인증 필요
+router.use(authenticate)
 
 // 게임 시작 POST /game/start
 router.post('/start', async (req, res) => {
     try {
-        const { user_id } = req.body
+        const user_id = req.user.user_id   // 토큰에서 추출
 
         const user = await User.findById(user_id)
         if (!user) {
@@ -61,6 +65,11 @@ router.post('/end', async (req, res) => {
             return res.status(404).json({ message: '게임 로그를 찾을 수 없습니다' })
         }
 
+        // 본인 game_run인지 검증 (NF-004 보안)
+        if (gameRun.user_id.toString() !== req.user.user_id) {
+            return res.status(403).json({ message: '권한이 없습니다' })
+        }
+
         // 서버 측 데이터 검증
         if (final_wave < 1) {
             return res.status(400).json({ message: '비정상적인 웨이브 값입니다' })
@@ -85,7 +94,7 @@ router.post('/end', async (req, res) => {
         const user = await User.findById(gameRun.user_id)
         user.total_cheese += total_cheese_earned
 
-        // 도감 업데이트 - 신규 카드만 추가
+        // 도감 업데이트
         if (Array.isArray(discovered_cards) && discovered_cards.length > 0) {
             const newCards = discovered_cards.filter(
                 code => !user.discovered_cards.includes(code)
