@@ -1,8 +1,10 @@
 const express = require('express')
 const router = express.Router()
+const mongoose = require('mongoose')   // ← 추가
 const Leaderboard = require('../models/Leaderboard')
+const authenticate = require('../middleware/auth')
 
-// TOP 100 랭킹 GET /leaderboard
+// TOP 100 랭킹 GET /leaderboard (인증 불필요)
 router.get('/', async (req, res) => {
     try {
         const top100 = await Leaderboard.find()
@@ -14,7 +16,6 @@ router.get('/', async (req, res) => {
             .limit(100)
             .select('-__v')
 
-        // 랭크 번호 추가
         const ranked = top100.map((entry, idx) => ({
             rank: idx + 1,
             user_id: entry.user_id,
@@ -35,17 +36,17 @@ router.get('/', async (req, res) => {
     }
 })
 
-// 내 랭킹 GET /leaderboard/me?user_id=xxx
-router.get('/me', async (req, res) => {
+// 내 랭킹 GET /leaderboard/me (인증 필요)
+router.get('/me', authenticate, async (req, res) => {
     try {
-        const { user_id } = req.query
+        // 토큰의 user_id를 ObjectId로 변환
+        const user_id = new mongoose.Types.ObjectId(req.user.user_id)
 
         const myEntry = await Leaderboard.findOne({ user_id })
         if (!myEntry) {
             return res.status(404).json({ message: '랭킹 기록이 없습니다' })
         }
 
-        // 내 위에 있는 사람 수 + 1 = 내 순위
         const higherCount = await Leaderboard.countDocuments({
             $or: [
                 { max_wave_reached: { $gt: myEntry.max_wave_reached } },
